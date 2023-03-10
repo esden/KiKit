@@ -112,6 +112,21 @@ def openpnp(**kwargs):
     app = fakeKiCADGui()
     return execute_with_debug(openpnp.exportOpenPnp, kwargs)
 
+@click.command()
+@click.argument("schematic", type=click.Path(dir_okay=False))
+@fabCommand
+@click.option("--preset", "-p", multiple=True, help="A panelization preset file; use prefix ':' for built-in styles.")
+def onebitsquared(preset, **kwargs):
+    """
+    Prepare fabrication files for 1BitSquared
+    """
+    from kikit import panelize_ui_impl as ki
+    preset = ki.obtainPreset(preset)
+    from kikit.fab import onebitsquared
+    from kikit.common import fakeKiCADGui
+    app = fakeKiCADGui()
+    return execute(onebitsquared.exportOneBitSquared, dict(kwargs, preset=preset))
+
 @click.group()
 def fab():
     """
@@ -124,3 +139,4 @@ fab.add_command(pcbway)
 fab.add_command(oshpark)
 fab.add_command(neodenyy1)
 fab.add_command(openpnp)
+fab.add_command(onebitsquared)
