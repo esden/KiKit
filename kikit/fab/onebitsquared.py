@@ -132,7 +132,7 @@ def to_mm_coords(coords):
         mm_coords + (to_mm(c))
     return mm_coords
 
-def generateHanwhaSSA(bomData, posData, panel_preset, board, filename, panel_side="T"):
+def generateHanwhaSSA(bomData, posData, panel_preset, board, filename, panel_side='T'):
     ref_v_key = dict()
     for cType, references in bomData.items():
         for ref in references:
@@ -140,6 +140,14 @@ def generateHanwhaSSA(bomData, posData, panel_preset, board, filename, panel_sid
 
     import kikit.panelize_ui_impl as ki
     from kikit.panelize import Panel
+
+    if panel_side == 'T':
+        panel_side_name = "TOP"
+    elif panel_side == 'B':
+        panel_side_name = "BOTTOM"
+    else:
+        print(f"The provided panel side \"{panel_side}\" is not valid. Only \"T\" and \"B\" are supported.")
+        exit
 
     loadedBoard = pcbnew.LoadBoard(board)
 
@@ -173,7 +181,10 @@ def generateHanwhaSSA(bomData, posData, panel_preset, board, filename, panel_sid
                   imageSize[1] * panel_array[1] + panel_gap[1] * (panel_array[1] - 1))
     print(f"panel size {panel_size}")
 
-    placement_origin = (-(panel_frame_width + panel_frame_gap), panel_frame_width + panel_frame_gap)
+    if panel_side == 'T':
+        placement_origin = (-(panel_frame_width + panel_frame_gap), panel_frame_width + panel_frame_gap)
+    else:
+        placement_origin = (-(panel_frame_width + panel_frame_gap + imageSize[0]), panel_frame_width + panel_frame_gap)
     print(f"placement origin {placement_origin}")
 
     panel_array_offset = (imageSize[0] + panel_gap[0], imageSize[1] + panel_gap[1])
@@ -184,9 +195,20 @@ def generateHanwhaSSA(bomData, posData, panel_preset, board, filename, panel_sid
         exit
 
     fid_offset = (panel_preset["fiducials"]["hoffset"], panel_preset["fiducials"]["voffset"])
-    fiducials = ((panel_size[0] - fid_offset[0] - placement_origin[0], fid_offset[1] - placement_origin[1]), \
-                 (panel_size[0] - fid_offset[0] - placement_origin[0], panel_size[1] - fid_offset[1] - placement_origin[1]), \
-                 (fid_offset[0] - placement_origin[0], panel_size[1] - fid_offset[1] - placement_origin[1]))
+    if panel_side == 'T':
+        #fiducials = ((panel_size[0] - fid_offset[0] - placement_origin[0], fid_offset[1] - placement_origin[1]), \
+        #             (panel_size[0] - fid_offset[0] - placement_origin[0], panel_size[1] - fid_offset[1] - placement_origin[1]), \
+        #             (fid_offset[0] - placement_origin[0], panel_size[1] - fid_offset[1] - placement_origin[1]))
+        fiducials = ((placement_origin[0] + panel_size[0] - fid_offset[0], -placement_origin[1] + fid_offset[1]), \
+                     (placement_origin[0] + panel_size[0] - fid_offset[0], -placement_origin[1] + panel_size[1] - fid_offset[1]), \
+                     (placement_origin[0]                 + fid_offset[0], -placement_origin[1] + panel_size[1] - fid_offset[1]))
+    else:
+        fiducials = ((placement_origin[0]                 + fid_offset[0], -placement_origin[1] + fid_offset[1]), \
+                     (placement_origin[0] + panel_size[0] - fid_offset[0], -placement_origin[1] + panel_size[1] - fid_offset[1]), \
+                     (placement_origin[0]                 + fid_offset[0], -placement_origin[1] + panel_size[1] - fid_offset[1]))
+
+    for fid in fiducials:
+        print(f"fid {fid}")
 
     config = configparser.ConfigParser()
     config.add_section('VERSION')
@@ -201,7 +223,7 @@ def generateHanwhaSSA(bomData, posData, panel_preset, board, filename, panel_sid
     config['PCB']['Bad Mark'] = 'NONE, 0, 0'
 
     config.add_section('BOARD')
-    config['BOARD']['Board Name'] = panel_preset["text"]["text"]
+    config['BOARD']['Board Name'] = panel_preset["text"]["text"] + " " + panel_side_name
     config['BOARD']['PCB Size'] = f"{to_mm(panel_size[0]):.3f}, {to_mm(panel_size[1]):.3f}, {to_mm(imageThickness):.3f}"
     config['BOARD']['Array'] = f"{panel_array[0]}, {panel_array[1]}, LOWER RIGHT"
     config['BOARD']['Array Offset'] = f"{to_mm(panel_array_offset[0]):.3f}, {to_mm(panel_array_offset[1]):.3f}"
@@ -222,7 +244,10 @@ def generateHanwhaSSA(bomData, posData, panel_preset, board, filename, panel_sid
             ref, x, y, side, t = line
             if side != panel_side:
                 continue
-            line = list((ref, f"{-x:.3f}", f"{y:.3f}", '0.000', f"{t:.3f}", 'NONE', '0', '0', '0', '0', '1991', '0', ref_v_key[ref], "", ""))
+            if panel_side == 'T':
+                line = list((ref, f"{-x:.3f}", f"{y:.3f}", '0.000', f"{t:.3f}", 'NONE', '0', '0', '0', '0', '1991', '0', ref_v_key[ref], "", ""))
+            else:
+                line = list((ref, f"{x:.3f}", f"{y:.3f}", '0.000', f"{t:.3f}", 'NONE', '0', '0', '0', '0', '1991', '0', ref_v_key[ref], "", ""))
             writer.writerow(line)
 
 
@@ -307,4 +332,5 @@ def exportOneBitSquared(preset, board, outputdir, schematic, nametemplate, drc):
     print("converting bom to Xsv")
     bomToXsv(bom, os.path.join(outputdir, expandNameTemplate(nametemplate, "bom", loadedBoard) + ".csv"), nboards, types)
     bomToXsv(bom, os.path.join(outputdir, expandNameTemplate(nametemplate, "bom", loadedBoard) + ".txt"), nboards, types, delim='\t')
-    generateHanwhaSSA(bom, posData, preset, board, os.path.join(outputdir, expandNameTemplate(nametemplate, "hanwha", loadedBoard) + ".ssa"))
+    generateHanwhaSSA(bom, posData, preset, board, os.path.join(outputdir, expandNameTemplate(nametemplate, "hanwha-top", loadedBoard) + ".ssa"), panel_side='T')
+    generateHanwhaSSA(bom, posData, preset, board, os.path.join(outputdir, expandNameTemplate(nametemplate, "hanwha-bottom", loadedBoard) + ".ssa"), panel_side='B')
