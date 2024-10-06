@@ -136,6 +136,7 @@ def generateHanwhaSSA(bomData, posData, panel_preset, board, filename, panel_sid
     ref_v_key = dict()
     for cType, references in bomData.items():
         for ref in references:
+            #print(f"ref {ref}, cType {cType}")
             ref_v_key[ref] = cType[0]
 
     import kikit.panelize_ui_impl as ki
@@ -168,23 +169,35 @@ def generateHanwhaSSA(bomData, posData, panel_preset, board, filename, panel_sid
     panel_array = (panel_preset["layout"]["cols"], panel_preset["layout"]["rows"])
     panel_gap = (panel_preset["layout"]["hspace"], panel_preset["layout"]["vspace"])
 
-    if panel_preset["framing"]["type"] != "frame":
-        print("ERROR: We only support panels with frames")
+    panel_frame_type = panel_preset["framing"]["type"]
+    if panel_frame_type not in ("frame", "railstb", "railslr"):
+        print("ERROR: We only support panels with frames or rails")
         exit
 
     panel_frame_gap = panel_preset["framing"]["space"]
     panel_frame_width = panel_preset["framing"]["width"]
 
-    panel_size = ((panel_frame_width + panel_frame_gap) * 2 + \
-                  imageSize[0] * panel_array[0] + panel_gap[0] * (panel_array[0] - 1), \
-                  (panel_frame_width + panel_frame_gap) * 2 + \
-                  imageSize[1] * panel_array[1] + panel_gap[1] * (panel_array[1] - 1))
+    if panel_frame_type in ("frame", "railslr"):
+        panel_width = (panel_frame_width + panel_frame_gap) * 2 + imageSize[0] * panel_array[0] + panel_gap[0] * (panel_array[0] - 1)
+        image_offset_x = panel_frame_width + panel_frame_gap
+    else:
+        panel_width = imageSize[0] * panel_array[0] + panel_gap[0] * (panel_array[0] - 1)
+        image_offset_x = 0
+
+    if panel_frame_type in ("frame", "railstb"):
+        panel_height = ((panel_frame_width + panel_frame_gap) * 2 + imageSize[1] * panel_array[1] + panel_gap[1] * (panel_array[1] - 1))
+        image_offset_y = panel_frame_width + panel_frame_gap
+    else:
+        panel_height = imageSize[1] * panel_array[1] + panel_gap[1] * (panel_array[1] - 1)
+        image_offset_y = 0
+
+    panel_size = (panel_width, panel_height)
     print(f"panel size {panel_size}")
 
     if panel_side == 'T':
-        placement_origin = (-(panel_frame_width + panel_frame_gap), panel_frame_width + panel_frame_gap)
+        placement_origin = (-image_offset_x, image_offset_y)
     else:
-        placement_origin = (-(panel_frame_width + panel_frame_gap + imageSize[0]), panel_frame_width + panel_frame_gap)
+        placement_origin = (-(image_offset_x + imageSize[0]), image_offset_y)
     print(f"placement origin {placement_origin}")
 
     panel_array_offset = (imageSize[0] + panel_gap[0], imageSize[1] + panel_gap[1])
@@ -228,7 +241,7 @@ def generateHanwhaSSA(bomData, posData, panel_preset, board, filename, panel_sid
     config['BOARD']['Array'] = f"{panel_array[0]}, {panel_array[1]}, LOWER RIGHT"
     config['BOARD']['Array Offset'] = f"{to_mm(panel_array_offset[0]):.3f}, {to_mm(panel_array_offset[1]):.3f}"
 
-
+    print(f"opening file")
     with open(filename, "w", newline="\r\n", encoding="utf-8") as configfile:
         config.write(configfile)
         configfile.write("[FIDUCIAL]\n")
@@ -248,6 +261,7 @@ def generateHanwhaSSA(bomData, posData, panel_preset, board, filename, panel_sid
                 line = list((ref, f"{-x:.3f}", f"{y:.3f}", '0.000', f"{t:.3f}", 'NONE', '0', '0', '0', '0', '1991', '0', ref_v_key[ref], "", ""))
             else:
                 line = list((ref, f"{x:.3f}", f"{y:.3f}", '0.000', f"{t:.3f}", 'NONE', '0', '0', '0', '0', '1991', '0', ref_v_key[ref], "", ""))
+            #print(f"writing line \"{line}\"")
             writer.writerow(line)
 
 
