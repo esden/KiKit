@@ -331,14 +331,14 @@ def exportOneBitSquared(preset, board, outputdir, schematic, nametemplate, drc):
         if not key or not manu or not partno:
             missingFields = True
             for r in references:
-                print(f"WARNING: Component {r} is missing key, manufacturer and/or part number")
-    if missingFields and missingerror:
-        sys.exit("There are components with missing ordercode, aborting")
+                print("WARNING: Component {} is missing{}{}{}.".format(r, " key" if not key else "", " manufacturer" if not manu else "", " part number" if not partno else ""))
+    #if missingFields and missingerror:
+    #    sys.exit("There are components with missing fields, aborting")
     if missingKeys and missingkeyerror:
-        sys.exit("There are components with missing ordercode, aborting")
+        sys.exit("There are components with missing keys, aborting")
 
     print("Collecting pos data")
-    posData = collectPosData(loadedBoard, correctionFields, posFilter=lambda f: f.GetTypeName() == "SMD", bom=components, correctionFile=correctionpatterns)
+    posData = collectPosData(loadedBoard, correctionFields, posFilter=lambda f: f.GetTypeName() == "SMD" and not f.IsDNP(), bom=components, correctionFile=correctionpatterns)
     print("storing pos data")
     posDataToFile(posData, os.path.join(outputdir, expandNameTemplate(nametemplate, "pos", loadedBoard) + ".csv"))
     print("collecting solder types")
