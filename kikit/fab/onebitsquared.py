@@ -136,6 +136,7 @@ def generateHanwhaSSA(bomData, posData, panel_preset, board, filename, panel_sid
     ref_v_key = dict()
     for cType, references in bomData.items():
         for ref in references:
+            # print(f"ref {ref} type {cType[0]}")
             ref_v_key[ref] = cType[0]
 
     import kikit.panelize_ui_impl as ki
@@ -244,6 +245,9 @@ def generateHanwhaSSA(bomData, posData, panel_preset, board, filename, panel_sid
             ref, x, y, side, t = line
             if side != panel_side:
                 continue
+            if ref not in ref_v_key.keys():
+                print(f"Skipping pos line for ref {ref} due to no key (panel side {panel_side})")
+                continue
             if panel_side == 'T':
                 line = list((ref, f"{-x:.3f}", f"{y:.3f}", '0.000', f"{t:.3f}", 'NONE', '0', '0', '0', '0', '1991', '0', ref_v_key[ref], "", ""))
             else:
@@ -270,6 +274,8 @@ def exportOneBitSquared(preset, board, outputdir, schematic, nametemplate, drc):
     missingkeyerror = True
     missingerror = False
     nboards = 1
+
+    # print("Board: %s" % board)
 
     ensureValidBoard(board)
     loadedBoard = pcbnew.LoadBoard(board)
