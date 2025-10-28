@@ -125,7 +125,7 @@ def onebitsquared(preset, **kwargs):
     from kikit.fab import onebitsquared
     from kikit.common import fakeKiCADGui
     app = fakeKiCADGui()
-    return execute(onebitsquared.exportOneBitSquared, dict(kwargs, preset=preset))
+    return execute_with_debug(onebitsquared.exportOneBitSquared, dict(kwargs, preset=preset))
 
 @click.group()
 def fab():
