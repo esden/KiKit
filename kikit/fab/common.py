@@ -238,10 +238,14 @@ def isValidBoardPath(filename):
 def ensureValidSch(filename):
     if not isValidSchPath(filename):
         raise RuntimeError(f"The path {filename} is not a valid KiCAD schema file")
+    if not os.path.exists(filename):
+        raise RuntimeError(f"The Schematic path {filename} does not exist")
 
 def ensureValidBoard(filename):
     if not isValidBoardPath(filename):
         raise RuntimeError(f"The path {filename} is not a valid KiCAD PCB file")
+    if not os.path.exists(filename):
+        raise RuntimeError(f"The PCB path {filename} does not exist")
 
 def expandNameTemplate(template: str, filetype: str, board: pcbnew.BOARD) -> str:
     if re.findall(r"\{.*\}", template) == []:
